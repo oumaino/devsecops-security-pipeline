@@ -1,0 +1,29 @@
+name: Security CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundation:
+    name: Foundation check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Confirm foundation
+        run: |
+          echo "DevSecOps foundation is ready."
+          echo "Security controls will be added incrementally."
