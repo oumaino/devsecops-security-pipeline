@@ -20,10 +20,55 @@ jobs:
   foundation:
     name: Foundation check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-      - name: Confirm foundation
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
         run: |
-          echo "DevSecOps foundation is ready."
-          echo "Security controls will be added incrementally."
+          python -m pip install --upgrade pip
+          python -m pip install --requirement requirements-dev.txt
+
+      - name: Run automated tests
+        run: python -m pytest --verbose
+
+  docker:
+    name: Docker build
+    needs: foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --pull \
+            --tag "devsecops-api:${{ github.sha }}" \
+            .
+
+      - name: Verify non-root container user
+        run: |
+          configured_user="$(
+            docker image inspect \
+              "devsecops-api:${{ github.sha }}" \
+              --format '{{.Config.User}}'
+          )"
+
+          test "$configured_user" = "appuser:appgroup"
+          echo "Configured container user: $configured_user"
